@@ -8,8 +8,6 @@ crawlPage("https://news.ycombinator.com/ask", "ask");
 crawlPage("https://news.ycombinator.com/show", "show");
 crawlPage("https://news.ycombinator.com/jobs", "jobs");
 
-
-
 function delay(time) {
     return new Promise(function (resolve) {
         setTimeout(resolve, time)
@@ -36,34 +34,45 @@ function crawlPage(url, prefix) {
             width: 1920,
             height: 1080
         });
-        
+
         await page.goto(url, {
             waitUntil: 'networkidle0',
             timeout: 0
         });
 
+        await page.screenshot({
+            path: `screenshots/${prefix}.png`,
+            fullPage: true
+        });
+        await page.screenshot({
+            path: `screenshots/${prefix}-fold.png`,
+            fullPage: false
+        });
+
         const addresses = await page.$$eval('a', as => as.map(a => a.href));
-
+        const padding = addresses.length % 10;
         for (let i = 0; i < addresses.length; i++) {
-            console.log(`Now serving ${i} of ${addresses.length}: ${addresses[i]}`);
             try {
-                await page.goto(addresses[i], { waitUntil: "networkidle0", timeout: 0 });
+                if (addresses[i].startsWith("http") === true) {
+                    console.log(`Now serving ${i} of ${addresses.length}: ${addresses[i]}`);
+                    await page.goto(addresses[i], { waitUntil: "networkidle0", timeout: 300000 });
 
-                const watchDog = page.waitForFunction(() => 'window.status === "ready"', { timeout: 0 });
-                await watchDog;
+                    const watchDog = page.waitForFunction(() => 'window.status === "ready"', { timeout: 300000 });
+                    await watchDog;
 
-                await page.screenshot({
-                    path: `screenshots/${prefix}-screenshots-${i}.png`,
-                    fullPage: true
-                });
-                await page.screenshot({
-                    path: `screenshots/${prefix}-screenshots-${i}-fold.png`,
-                    fullPage: false
-                });
+                    await page.screenshot({
+                        path: `screenshots/${prefix}-${i.toString().padStart(padding, '0')}.png`,
+                        fullPage: true
+                    });
+                    await page.screenshot({
+                        path: `screenshots/${prefix}-${i.toString().padStart(padding, '0')}-fold.png`,
+                        fullPage: false
+                    });
+                }
             } catch (error) {
                 console.error(error);
             } finally {
-                console.log(`Finished serving ${i} of ${addresses.length}: ${addresses[i]}`);
+                console.log(`Finished with ${i} of ${addresses.length}: ${addresses[i]}`);
             };
         }
 
